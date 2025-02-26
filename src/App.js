@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Layout, Input, Button, List, Typography, Space, message } from "antd";
+import React, { useState, useEffect } from "react";
+import { Layout, Input, Button, List, Typography, Space, message, Checkbox } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import AppHeader from "./components/Header";
 import AppFooter from "./components/Footer";
@@ -7,15 +7,24 @@ import AppFooter from "./components/Footer";
 const { Content } = Layout;
 
 const App = () => {
-  const [tasks, setTasks] = useState([]);
+  // Load tasks from localStorage
+  const [tasks, setTasks] = useState(() => {
+    const savedTasks = localStorage.getItem("tasks");
+    return savedTasks ? JSON.parse(savedTasks) : [];
+  });
   const [input, setInput] = useState("");
+
+  // Save tasks to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+  }, [tasks]);
 
   const addTask = () => {
     if (!input.trim()) {
       message.warning("Task cannot be empty!");
       return;
     }
-    setTasks([...tasks, input]);
+    setTasks([...tasks, { text: input, completed: false }]);
     setInput("");
   };
 
@@ -23,9 +32,18 @@ const App = () => {
     setTasks(tasks.filter((_, i) => i !== index));
   };
 
+  const toggleCompletion = (index) => {
+    const updatedTasks = tasks.map((task, i) =>
+      i === index ? { ...task, completed: !task.completed } : task
+    );
+    setTasks(updatedTasks);
+  };
+
   const clearAllTasks = () => {
     setTasks([]);
   };
+
+  const remainingTasks = tasks.filter(task => !task.completed).length;
 
   return (
     <Layout
@@ -42,7 +60,7 @@ const App = () => {
 
       {/* Main Content */}
       <Content style={{ padding: "20px", display: "flex", justifyContent: "center" }}>
-        <div className="todo-container" style={{ background: "rgba(255, 255, 255, 0.8)", padding: "20px", borderRadius: "8px" }}>
+        <div className="todo-container" style={{ background: "rgba(255, 255, 255, 0.9)", padding: "20px", borderRadius: "8px", width: "400px" }}>
           <Typography.Title level={2}>To-Do App</Typography.Title>
           <Space>
             <Input
@@ -54,21 +72,26 @@ const App = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={addTask} />
           </Space>
           <List
-            style={{ marginTop: "20px", width: "300px" }}
+            style={{ marginTop: "20px", width: "100%" }}
             bordered
             dataSource={tasks}
             renderItem={(task, index) => (
               <List.Item
                 actions={[<DeleteOutlined onClick={() => deleteTask(index)} style={{ color: "red", cursor: "pointer" }} />]}
+                style={{ textDecoration: task.completed ? "line-through" : "none", opacity: task.completed ? 0.6 : 1 }}
               >
-                {task}
+                <Checkbox checked={task.completed} onChange={() => toggleCompletion(index)} style={{ marginRight: "10px" }} />
+                {task.text}
               </List.Item>
             )}
           />
           {tasks.length > 0 && (
-            <Button type="dashed" danger onClick={clearAllTasks} style={{ marginTop: "15px" }}>
-              Clear All
-            </Button>
+            <>
+              <Typography.Text strong style={{ display: "block", textAlign: "center", marginTop: "10px" }}>{`Remaining Tasks: ${remainingTasks}`}</Typography.Text>
+              <Button type="dashed" danger onClick={clearAllTasks} style={{ marginTop: "15px", width: "100%" }}>
+                Clear All
+              </Button>
+            </>
           )}
         </div>
       </Content>
